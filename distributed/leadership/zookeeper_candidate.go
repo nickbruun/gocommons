@@ -6,7 +6,6 @@ import (
 	"github.com/nickbruun/gocommons/zkutils"
 	"github.com/samuel/go-zookeeper/zk"
 	"path"
-	"strings"
 	"sync"
 	"time"
 )
@@ -30,6 +29,9 @@ type zkCandidate struct {
 
 	// Done.
 	done sync.WaitGroup
+
+	// Leader data.
+	data []byte
 }
 
 // Test if the candidature has been stopped.
@@ -76,7 +78,7 @@ func (c *zkCandidate) createCandidateNode() (n zkutils.SequenceNode, err error) 
 	candidatePath := fmt.Sprintf("%s/candidate", c.pp)
 
 	var path string
-	path, err = c.cm.Conn.CreateProtectedEphemeralSequential(candidatePath, nil, c.acl)
+	path, err = c.cm.Conn.CreateProtectedEphemeralSequential(candidatePath, c.data, c.acl)
 
 	if err == nil {
 		n, err = zkutils.ParseSequenceNode(path, "candidate")
@@ -92,28 +94,11 @@ func (c *zkCandidate) createCandidateNode() (n zkutils.SequenceNode, err error) 
 	}
 }
 
-// Safely delete a node.
-func (c *zkCandidate) safelyDeleteNode(path string) {
-	for {
-		err := c.cm.Conn.Delete(path, -1)
-		if err == nil {
-			log.Debugf("Removed node: %s", path)
-			break
-		} else if err == zk.ErrNoNode {
-			log.Debugf("Node no longer exists: %s", path)
-			break
-		} else {
-			log.Warnf("Failed to remove node %s, waiting 100 ms to retry: %v", path, err)
-			time.Sleep(100 * time.Millisecond)
-		}
-	}
-}
-
 // Assume leadership.
 func (c *zkCandidate) assumeLeadership(candidateNode zkutils.SequenceNode) (stopped bool) {
 	// Remove the candidate node once we're done.
 	candidatePath := c.nodePath(candidateNode.Name)
-	defer c.safelyDeleteNode(candidatePath)
+	defer zkutils.DeleteSafely(c.cm.Conn, candidatePath)
 
 	log.Info("Became leader")
 
@@ -286,28 +271,4 @@ func (c *zkCandidate) Stop() {
 	log.Debug("Sent stop signal, waiting for running candidate")
 	c.done.Wait()
 	log.Debug("Done waiting for running candidate")
-}
-
-// New ZooKeeper candidate.
-//
-// The leadership is maintained in the most cautious manner possible, meaning
-// that if an error occurs in polling the ZooKeeper cluster, the leadership is
-// immediately terminated to avoid racing leaders as best as possible.
-func NewZooKeeperCandidate(zkConn *zkutils.ConnMan, pathPrefix string, leadershipHandler LeadershipHandler) (Candidate, error) {
-	if pathPrefix == "" || pathPrefix == "/" {
-		return nil, fmt.Errorf("invalid path prefix: %s", pathPrefix)
-	}
-
-	zc := &zkCandidate{
-		cm:   zkConn,
-		pp:   strings.TrimRight(pathPrefix, "/"),
-		acl:  zk.WorldACL(zk.PermAll),
-		lh:   leadershipHandler,
-		stop: make(chan struct{}, 10),
-	}
-
-	zc.done.Add(1)
-	go zc.run()
-
-	return zc, nil
 }

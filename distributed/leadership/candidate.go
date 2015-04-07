@@ -8,6 +8,8 @@ package leadership
 type LeadershipHandler func(end <-chan struct{})
 
 // Candidate.
+//
+// Offers and handles leadership.
 type Candidate interface {
 	// Stop offering candidacy.
 	Stop()

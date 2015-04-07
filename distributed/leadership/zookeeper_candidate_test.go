@@ -1,6 +1,7 @@
 package leadership
 
 import (
+	"fmt"
 	logrus "github.com/Sirupsen/logrus"
 	log "github.com/nickbruun/gocommons/logging"
 	"github.com/nickbruun/gocommons/zkutils"
@@ -25,7 +26,7 @@ type zkCandidateTestRigConfig struct {
 	CreateCandidatesSerially bool
 
 	// Path prefix.
-	PathPrefix string
+	Path string
 }
 
 // ZooKeeper candidate test rig candidate.
@@ -52,7 +53,7 @@ type zkCandidateTestRig struct {
 	zk *zk.Conn
 
 	// Path prefix.
-	pp string
+	path string
 
 	// Candidate lock.
 	candsLock sync.Mutex
@@ -84,7 +85,7 @@ func (r *zkCandidateTestRig) CleanUp() {
 // List candidate nodes.
 func (r *zkCandidateTestRig) listCandidateNodes() []zkutils.SequenceNode {
 	// List the child nodes of the prefix.
-	children, _, err := r.zk.Children(r.pp)
+	children, _, err := r.zk.Children(r.path)
 	if err == zk.ErrNoNode {
 		return []zkutils.SequenceNode{}
 	} else if err != nil {
@@ -138,16 +139,16 @@ func (r *zkCandidateTestRig) AwaitNewCandidateNode() <-chan error {
 
 		for {
 			// List the candidates.
-			children, _, event, err := r.zk.ChildrenW(r.pp)
+			children, _, event, err := r.zk.ChildrenW(r.path)
 			var nodes []zkutils.SequenceNode
 
 			if err == zk.ErrNoNode {
-				log.Debugf("Awaiting existence of %s", r.pp)
-				if err = <-zkutils.AwaitExists(r.zk, r.pp); err != nil {
+				log.Debugf("Awaiting existence of %s", r.path)
+				if err = <-zkutils.AwaitExists(r.zk, r.path); err != nil {
 					await <- err
 					return
 				}
-				log.Debugf("%s exists, retrying", r.pp)
+				log.Debugf("%s exists, retrying", r.path)
 
 				seqNumGt = -1
 				first = false
@@ -181,9 +182,9 @@ func (r *zkCandidateTestRig) AwaitNewCandidateNode() <-chan error {
 				}
 			}
 
-			log.Debugf("Awaiting event for children of %s", r.pp)
+			log.Debugf("Awaiting event for children of %s", r.path)
 			<-event
-			log.Debugf("Event occured for children of %s", r.pp)
+			log.Debugf("Event occured for children of %s", r.path)
 		}
 	}()
 
@@ -204,7 +205,7 @@ func newZkCandidateTestRig(t *testing.T, config zkCandidateTestRigConfig) *zkCan
 		cluster:      config.TestCluster,
 		servers:      config.Servers,
 		zk:           zkConn,
-		pp:           config.PathPrefix,
+		path:         config.Path,
 		cands:        make([]*zkCandidateTestRigCandidate, 0, config.NumCandidates),
 		leaderChange: make(chan struct{}, 128),
 	}
@@ -226,7 +227,9 @@ func newZkCandidateTestRig(t *testing.T, config zkCandidateTestRigConfig) *zkCan
 		}
 
 		candIdx := i
-		cand, err := NewZooKeeperCandidate(candZkConn, rig.pp, func(endChan <-chan struct{}) {
+
+		provider := NewZooKeeperLeadershipProvider(candZkConn, rig.path, zk.WorldACL(zk.PermAll))
+		cand := provider.GetCandidate([]byte(fmt.Sprintf("%d", i)), func(endChan <-chan struct{}) {
 			// Mark the candidate as the leader.
 			rig.candsLock.Lock()
 			rig.leaderChange <- struct{}{}
@@ -279,7 +282,7 @@ func TestZooKeeperCandidate(t *testing.T) {
 		rig := newZkCandidateTestRig(t, zkCandidateTestRigConfig{
 			TestCluster:              testCluster,
 			Servers:                  servers,
-			PathPrefix:               "/my/test/election",
+			Path:                     "/my/test/election",
 			NumCandidates:            1,
 			CreateCandidatesSerially: true,
 		})
@@ -326,7 +329,7 @@ func TestZooKeeperCandidate(t *testing.T) {
 		rig := newZkCandidateTestRig(t, zkCandidateTestRigConfig{
 			TestCluster:              testCluster,
 			Servers:                  servers,
-			PathPrefix:               "/my/test/election",
+			Path:                     "/my/test/election",
 			NumCandidates:            3,
 			CreateCandidatesSerially: true,
 		})

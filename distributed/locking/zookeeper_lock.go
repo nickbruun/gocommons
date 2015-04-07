@@ -72,23 +72,6 @@ func (l *zkLock) listLockNodes() ([]zkutils.SequenceNode, error) {
 	return zkutils.ParseSequenceNodes(children, "lock"), nil
 }
 
-// Safely delete a node.
-func (l *zkLock) safelyDeleteNode(path string) {
-	for {
-		err := l.cm.Conn.Delete(path, -1)
-		if err == nil {
-			log.Debugf("Removed node: %s", path)
-			break
-		} else if err == zk.ErrNoNode {
-			log.Debugf("Node no longer exists: %s", path)
-			break
-		} else {
-			log.Warnf("Failed to remove node %s, waiting 100 ms to retry: %v", path, err)
-			time.Sleep(100 * time.Millisecond)
-		}
-	}
-}
-
 // Create lock node.
 func (l *zkLock) createNode() (n zkutils.SequenceNode, err error) {
 	// Attempt to create the lock node.
@@ -153,7 +136,7 @@ func (l *zkLock) retainLock(lockNode zkutils.SequenceNode) (<-chan struct{}, err
 
 	go func() {
 		// Remove the lock node once we're done.
-		defer l.safelyDeleteNode(lockPath)
+		defer zkutils.DeleteSafely(l.cm.Conn, lockPath)
 
 		// Wait for the lock to be released or the lock node to disappear for
 		// some reason.
@@ -287,7 +270,7 @@ func (l *zkLock) LockWithCancel(cancelCh <-chan interface{}) (<-chan struct{}, e
 		// Await acqusition of the lock.
 		failCh, err := l.awaitLock(lockNode, cancelCh)
 		if failCh == nil {
-			l.safelyDeleteNode(l.nodePath(lockNode.Name))
+			defer zkutils.DeleteSafely(l.cm.Conn, l.nodePath(lockNode.Name))
 		}
 
 		if failCh != nil || err != nil {

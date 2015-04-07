@@ -1,6 +1,7 @@
 // Package leadership provides leadership election and observation.
 //
 // To participate in leadership election as a candidate, an application must
-// instantiate a Candidate implementation. To observe the leadership of a
-// quorum, an application must instantiate an Observer implementation.
+// get a candidate implementation from a LeadershipProvider. To observe the
+// quorum, an application must instantiate get an Observer implementation from
+// a LeadershipProvider.
 package leadership
