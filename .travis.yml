@@ -9,8 +9,8 @@ go:
   - 1.5
 cache:
   directories:
-    - zookeeper-$ZOOKEEPER_VERSION
+    - $HOME/zookeeper-$ZOOKEEPER_VERSION
 install:
-  - test -d zookeeper-$ZOOKEEPER_VERSION || wget -O zookeeper-$ZOOKEEPER_VERSION.tar.gz http://mirrors.rackhosting.com/apache/zookeeper/zookeeper-$ZOOKEEPER_VERSION/zookeeper-$ZOOKEEPER_VERSION.tar.gz && tar -xvf zookeeper-$ZOOKEEPER_VERSION.tar.gz
+  - test -d zookeeper-$ZOOKEEPER_VERSION || (wget -O zookeeper-$ZOOKEEPER_VERSION.tar.gz http://mirrors.rackhosting.com/apache/zookeeper/zookeeper-$ZOOKEEPER_VERSION/zookeeper-$ZOOKEEPER_VERSION.tar.gz && tar -xvf zookeeper-$ZOOKEEPER_VERSION.tar.gz -C $HOME)
 script:
-  - ZOOKEEPER_PATH="$(pwd)/zookeeper-$ZOOKEEPER_VERSION" make test
+  - ZOOKEEPER_PATH="$HOME/zookeeper-$ZOOKEEPER_VERSION" make test
