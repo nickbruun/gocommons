@@ -1,8 +1,8 @@
 package zkutils
 
 import (
-	"github.com/samuel/go-zookeeper/zk"
 	"errors"
+	"github.com/samuel/go-zookeeper/zk"
 )
 
 var (

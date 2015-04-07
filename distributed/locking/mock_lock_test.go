@@ -1,29 +1,30 @@
 package locking
 
 import (
-	log "github.com/nickbruun/gocommons/logging"
 	logrus "github.com/Sirupsen/logrus"
-	"time"
-	"testing"
+	log "github.com/nickbruun/gocommons/logging"
 	"sync"
+	"testing"
+	"time"
 )
 
 func TestMockLock(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
 	provider := NewMockLockProvider()
 
-	// * Test acquisition and release of lock.
+	// * Test simple locking and unlocking.
 	{
-		l := provider.GetLock("/lock/path")
+		l := provider.GetLock("/my/lock")
 
 		for i := 0; i < 3; i++ {
-			l.Lock()
-			l.Unlock()
-		}
-
-		for i := 0; i < 3; i++ {
-			l.LockTimeout(time.Second)
-			l.Unlock()
+			AssertLock(t, l)
+			log.Debug("Acquired lock")
+			AssertUnlock(t, l)
+			log.Debug("Released lock")
+			AssertLockBeforeTimeout(t, l, time.Second)
+			log.Debug("Acquired lock before 1 s timeout")
+			AssertUnlock(t, l)
+			log.Debug("Released lock")
 		}
 	}
 
@@ -40,37 +41,41 @@ func TestMockLock(t *testing.T) {
 			l3Acquired.Add(1)
 			l4Acquired.Add(1)
 
-			l1.Lock()
+			AssertLock(t, l1)
+			log.Debug("Acquired lock 1, waiting for lock 2 to time out")
 
 			go func() {
-				if _, err := l2.LockTimeout(10 * time.Millisecond); err != ErrTimeout {
-					t.Fatalf("Expected lock to time out, but error was: %v", err)
-				}
-
+				AssertLockTimedOut(t, l2, 10*time.Millisecond)
+				log.Debug("Lock 2 timed out")
 				l2TimedOut.Done()
 			}()
 
 			go func() {
-				l3.Lock()
+				AssertLock(t, l3)
+				log.Debug("Lock 3 acquired")
 				l3Acquired.Done()
 			}()
 
 			go func() {
-				l4.Lock()
+				AssertLock(t, l4)
+				log.Debug("Lock 4 acquired")
 				l4Acquired.Done()
 			}()
 
 			l2TimedOut.Wait()
 
-			l1.Unlock()
+			AssertUnlock(t, l1)
+			log.Debug("Released lock 1, waiting for lock 3 to be acquired")
 
 			l3Acquired.Wait()
 
-			l3.Unlock()
+			AssertUnlock(t, l3)
+			log.Debug("Released lock 3, waiting for lock 4 to be acquired")
 
 			l4Acquired.Wait()
 
-			l4.Unlock()
+			AssertUnlock(t, l4)
+			log.Debug("Released lock 4")
 		}
 	}
 

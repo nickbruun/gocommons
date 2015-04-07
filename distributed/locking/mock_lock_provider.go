@@ -1,14 +1,14 @@
 package locking
 
 import (
+	log "github.com/nickbruun/gocommons/logging"
 	"sync"
 	"time"
-	log "github.com/nickbruun/gocommons/logging"
 )
 
 // Internal mock lock provider lock representation.
 type mockLockProviderLock struct {
-	locker *mockLock
+	locker  *mockLock
 	waiters []chan struct{}
 }
 
@@ -29,8 +29,8 @@ func (l *mockLockProviderLock) OfferToNext() {
 // exclusivity to be in effect.
 type MockLockProvider struct {
 	failing bool
-	locks map[string]*mockLockProviderLock
-	lock sync.Mutex
+	locks   map[string]*mockLockProviderLock
+	lock    sync.Mutex
 }
 
 // Fail the lock provider.
@@ -74,7 +74,7 @@ func (p *MockLockProvider) Recover() {
 
 func (p *MockLockProvider) GetLock(path string) Lock {
 	return &mockLock{
-		p: p,
+		p:    p,
 		path: path,
 	}
 }
@@ -82,7 +82,7 @@ func (p *MockLockProvider) GetLock(path string) Lock {
 // Acquire a lock.
 func (p *MockLockProvider) acquire(lock *mockLock) {
 	// To avoid duplication, we just acquire a lock with a really long timeout.
-	if !p.acquireTimeout(lock, 24 * time.Hour) {
+	if !p.acquireTimeout(lock, 24*time.Hour) {
 		panic("Lock with long timeout to emulate no timeout should always lock")
 	}
 }
@@ -95,7 +95,7 @@ func (p *MockLockProvider) acquireTimeout(lock *mockLock, timeout time.Duration)
 	il, exists := p.locks[lock.path]
 	if !exists {
 		il = &mockLockProviderLock{
-			locker: nil,
+			locker:  nil,
 			waiters: make([]chan struct{}, 0),
 		}
 		p.locks[lock.path] = il

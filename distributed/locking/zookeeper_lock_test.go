@@ -2,8 +2,10 @@ package locking
 
 import (
 	logrus "github.com/Sirupsen/logrus"
+	log "github.com/nickbruun/gocommons/logging"
 	"github.com/nickbruun/gocommons/zkutils"
 	"github.com/samuel/go-zookeeper/zk"
+	"sync"
 	"testing"
 	"time"
 )
@@ -16,36 +18,98 @@ func TestZooKeeperLock(t *testing.T) {
 	defer testCluster.Stop()
 	defer connMan.Close()
 
-	// * Test simple locking and unlocking.
 	provider := NewZooKeeperLockProvider(connMan, zk.WorldACL(zk.PermAll))
 
+	// * Test simple locking and unlocking.
 	{
 		l := provider.GetLock("/my/lock")
 
 		for i := 0; i < 3; i++ {
-			if _, err := l.Lock(); err != nil {
-				t.Fatalf("Failed to acquire lock: %v", err)
-			}
+			AssertLock(t, l)
+			log.Debug("Acquired lock")
+			AssertUnlock(t, l)
+			log.Debug("Released lock")
+			AssertLockBeforeTimeout(t, l, time.Second)
+			log.Debug("Acquired lock before 1 s timeout")
+			AssertUnlock(t, l)
+			log.Debug("Released lock")
+		}
+	}
 
-			t.Logf("Acquired lock")
+	// * Test that locks that have timed out are skipped when acquring locks.
+	{
+		l1 := provider.GetLock("/lock/path")
+		l2 := provider.GetLock("/lock/path")
+		l3 := provider.GetLock("/lock/path")
+		l4 := provider.GetLock("/lock/path")
 
-			if err := l.Unlock(); err != nil {
-				t.Fatalf("Failed to release lock: %v", err)
-			}
+		for i := 0; i < 3; i++ {
+			var l2TimedOut, l3Acquired, l4Acquired sync.WaitGroup
+			l2TimedOut.Add(1)
+			l3Acquired.Add(1)
+			l4Acquired.Add(1)
 
-			t.Logf("Released lock")
+			AssertLock(t, l1)
+			log.Debug("Acquired lock 1, waiting for lock 2 to time out")
 
-			if _, err := l.LockTimeout(time.Second); err != nil {
-				t.Fatalf("Failed to acquire lock with 1 s timeout: %v", err)
-			}
+			go func() {
+				AssertLockTimedOut(t, l2, 10*time.Millisecond)
+				log.Debug("Lock 2 timed out")
+				l2TimedOut.Done()
+			}()
 
-			t.Logf("Acquired lock before 1 s timeout")
+			go func() {
+				AssertLock(t, l3)
+				log.Debug("Lock 3 acquired")
+				l3Acquired.Done()
+			}()
 
-			if err := l.Unlock(); err != nil {
-				t.Fatalf("Failed to release lock: %v", err)
-			}
+			go func() {
+				AssertLock(t, l4)
+				log.Debug("Lock 4 acquired")
+				l4Acquired.Done()
+			}()
 
-			t.Logf("Released lock")
+			l2TimedOut.Wait()
+
+			AssertUnlock(t, l1)
+			log.Debug("Released lock 1, waiting for lock 3 to be acquired")
+
+			l3Acquired.Wait()
+
+			AssertUnlock(t, l3)
+			log.Debug("Released lock 3, waiting for lock 4 to be acquired")
+
+			l4Acquired.Wait()
+
+			AssertUnlock(t, l4)
+			log.Debug("Released lock 4")
+		}
+	}
+
+	// * Test lock failure by removing lock node.
+	{
+		l := provider.GetLock("/lock/path")
+		failCh := AssertLock(t, l)
+		log.Debug("Acquried lock, removing node")
+
+		children, _, err := connMan.Conn.Children("/lock/path")
+		if err != nil {
+			t.Fatalf("Failed to list children of /lock/path: %v", err)
+		}
+
+		for _, c := range children {
+			connMan.Conn.Delete("/lock/path/"+c, -1)
+		}
+
+		select {
+		case <-failCh:
+		case <-time.After(time.Second):
+			t.Fatalf("Lock did not fail after 1 s")
+		}
+
+		if err := l.Unlock(); err != ErrNotLocked {
+			t.Fatalf("Expected attempt at unlocking to return ErrNotLocked, but returned: %v", err)
 		}
 	}
 }

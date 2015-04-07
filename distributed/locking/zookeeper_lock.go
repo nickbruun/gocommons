@@ -5,9 +5,9 @@ import (
 	log "github.com/nickbruun/gocommons/logging"
 	"github.com/nickbruun/gocommons/zkutils"
 	"github.com/samuel/go-zookeeper/zk"
-	"time"
 	"path"
 	"sync"
+	"time"
 )
 
 // ZooKeeper lock.
@@ -161,7 +161,7 @@ func (l *zkLock) retainLock(lockNode zkutils.SequenceNode) (<-chan struct{}, err
 		case <-l.releaseCh:
 			// If the lock was released, stop watching the node.
 			lostEnd <- struct{}{}
-			log.Debug("Released lock: %s", l.path)
+			log.Debugf("Released lock: %s", l.path)
 
 		case <-lost:
 			// If the lock node is removed (or presumed removed due to a
@@ -197,7 +197,7 @@ func (l *zkLock) awaitLock(lockNode zkutils.SequenceNode, cancelCh <-chan interf
 
 			log.Warn("Error retrieving leadership locks, waiting 100 ms to retry: %v", err)
 
-			if isCancelledBefore(cancelCh, 100 * time.Millisecond) {
+			if isCancelledBefore(cancelCh, 100*time.Millisecond) {
 				return nil, ErrCancelled
 			} else {
 				continue
@@ -275,7 +275,7 @@ func (l *zkLock) LockWithCancel(cancelCh <-chan interface{}) (<-chan struct{}, e
 
 			log.Warnf("Error creating lock node, waiting 100 ms to retry: %v", err)
 
-			if isCancelledBefore(cancelCh, 100 * time.Millisecond) {
+			if isCancelledBefore(cancelCh, 100*time.Millisecond) {
 				return nil, ErrCancelled
 			} else {
 				continue
@@ -286,6 +286,10 @@ func (l *zkLock) LockWithCancel(cancelCh <-chan interface{}) (<-chan struct{}, e
 
 		// Await acqusition of the lock.
 		failCh, err := l.awaitLock(lockNode, cancelCh)
+		if failCh == nil {
+			l.safelyDeleteNode(l.nodePath(lockNode.Name))
+		}
+
 		if failCh != nil || err != nil {
 			return failCh, err
 		}
@@ -299,7 +303,9 @@ func (l *zkLock) Lock() (<-chan struct{}, error) {
 func (l *zkLock) LockTimeout(timeout time.Duration) (failCh <-chan struct{}, err error) {
 	cancelCh := make(chan interface{}, 1)
 	go func() {
+		log.Debugf("Timing out %v after %s", l, timeout)
 		<-time.After(timeout)
+		log.Debugf("Timeout occured for %v", l)
 		cancelCh <- struct{}{}
 	}()
 

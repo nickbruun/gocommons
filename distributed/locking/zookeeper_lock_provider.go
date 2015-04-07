@@ -17,7 +17,7 @@ type zkLockProvider struct {
 // New ZooKeeper lock provider.
 func NewZooKeeperLockProvider(connMan *zkutils.ConnMan, acl []zk.ACL) LockProvider {
 	return &zkLockProvider{
-		cm: connMan,
+		cm:  connMan,
 		acl: acl,
 	}
 }
@@ -25,7 +25,7 @@ func NewZooKeeperLockProvider(connMan *zkutils.ConnMan, acl []zk.ACL) LockProvid
 func (p *zkLockProvider) GetLock(path string) Lock {
 	return &zkLock{
 		path: path,
-		cm: p.cm,
-		acl: p.acl,
+		cm:   p.cm,
+		acl:  p.acl,
 	}
 }

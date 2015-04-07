@@ -1,19 +1,19 @@
 package locking
 
 import (
-	"time"
 	"sync"
+	"time"
 )
 
 // Mock lock.
 //
 // Should only be used for testing.
 type mockLock struct {
-	p *MockLockProvider
-	path string
+	p      *MockLockProvider
+	path   string
 	locked bool
 	failCh chan struct{}
-	lock sync.Mutex
+	lock   sync.Mutex
 }
 
 func (l *mockLock) Lock() (<-chan struct{}, error) {
