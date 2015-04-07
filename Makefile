@@ -10,8 +10,8 @@ export GOPATH
 
 DEPENDENCIES_DIRS := $(addprefix $(GOPATH)/src/, $(DEPENDENCIES))
 
-$(DEPENDENCIES_DIRS):
-	go get $(@:src/%=%)
+$(GOPATH)/src/%:
+	go get $(@:$(GOPATH)/src/%=%)
 
 test: $(DEPENDENCIES_DIRS)
 	go test -v $(PACKAGES:%=./%)
