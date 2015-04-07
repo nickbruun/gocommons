@@ -13,7 +13,4 @@ var (
 
 	// Lock acquisition timed out.
 	ErrTimeout = errors.New("lock acquisition timed out")
-
-	// Mock lock is failing hard.
-	ErrMockFailing = errors.New("mock lock is failing")
 )
