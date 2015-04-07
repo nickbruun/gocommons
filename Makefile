@@ -22,4 +22,7 @@ test: $(DEPENDENCIES_DIRS)
 format:
 	gofmt -l -w $(GO_SRC)
 
+godoc:
+	echo $(PACKAGES:%=https://godoc.org/github.com/nickbruun/gocommons/%) | xargs -L 1 curl $1 > /dev/null
+
 .PHONY: test format
