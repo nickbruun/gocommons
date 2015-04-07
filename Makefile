@@ -6,15 +6,15 @@ DEPENDENCIES := \
 	github.com/samuel/go-zookeeper/zk
 
 GOPATH ?= $(shell pwd)
+GOPATH_FIRST := $(firstword $(subst :, ,$(GOPATH)))
 export GOPATH
 
-DEPENDENCIES_DIRS := $(addprefix $(GOPATH)/src/, $(DEPENDENCIES))
+DEPENDENCIES_DIRS := $(addprefix $(GOPATH_FIRST)/src/, $(DEPENDENCIES))
 
-#$(GOPATH)/src/%:
-#	go get $(@:$(GOPATH)/src/%=%)
+$(GOPATH_FIRST)/src/%:
+	go get $(@:$(GOPATH_FIRST)/src/%=%)
 
-test:
-	@echo $(DEPENDENCIES_DIRS)
+test: $(DEPENDENCIES_DIRS)
 	go test -v $(PACKAGES:%=./%)
 
 format:
