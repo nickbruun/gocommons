@@ -5,10 +5,10 @@ DEPENDENCIES := \
 	github.com/Sirupsen/logrus \
 	github.com/samuel/go-zookeeper/zk
 
-DEPENDENCIES_DIRS := $(addprefix src/, $(DEPENDENCIES))
-
 GOPATH ?= $(shell pwd)
 export GOPATH
+
+DEPENDENCIES_DIRS := $(addprefix $(GOPATH)/src/, $(DEPENDENCIES))
 
 $(DEPENDENCIES_DIRS):
 	go get $(@:src/%=%)
