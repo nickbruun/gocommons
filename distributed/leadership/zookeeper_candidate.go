@@ -128,6 +128,7 @@ func (c *zkCandidate) assumeLeadership(candidateNode zkutils.SequenceNode) (stop
 
 	// Watch for session or node loss.
 	lost := make(chan struct{}, 1)
+	lostEnd := make(chan struct{}, 1)
 
 	go func() {
 		sessionLoss := c.cm.WatchSessionLoss()
@@ -148,6 +149,7 @@ func (c *zkCandidate) assumeLeadership(candidateNode zkutils.SequenceNode) (stop
 			log.Warnf("Candidate node removed, resigning as leader: %s", candidatePath)
 		case <-sessionLoss:
 			log.Warnf("Session likely lost, resigning as leader: %s", candidatePath)
+		case <-lostEnd:
 		}
 
 		lost <- struct{}{}
@@ -159,12 +161,14 @@ func (c *zkCandidate) assumeLeadership(candidateNode zkutils.SequenceNode) (stop
 
 	select {
 	case <-resigned:
+		lostEnd <- struct{}{}
 		break
 
 	case <-c.stop:
 		// If we are stopped, send an end message to the leadership handler
 		// and wait for the handler to resign.
 		stopped = true
+		lostEnd <- struct{}{}
 		end <- struct{}{}
 		log.Debug("Candidate stopped, awaiting leadership handler return")
 		<-resigned
