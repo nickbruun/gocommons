@@ -226,7 +226,7 @@ func newZkCandidateTestRig(t *testing.T, config zkCandidateTestRigConfig) *zkCan
 		}
 
 		candIdx := i
-		cand, err := NewZooKeeperCandidate(candZkConn, rig.pp, func(endChan chan struct{}) {
+		cand, err := NewZooKeeperCandidate(candZkConn, rig.pp, func(endChan <-chan struct{}) {
 			// Mark the candidate as the leader.
 			rig.candsLock.Lock()
 			rig.leaderChange <- struct{}{}
