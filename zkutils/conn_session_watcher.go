@@ -1,6 +1,7 @@
 package zkutils
 
 import (
+	log "github.com/nickbruun/gocommons/logging"
 	"github.com/samuel/go-zookeeper/zk"
 	"sync"
 	"time"
@@ -62,13 +63,16 @@ func (w *connSessionWatcher) watchSession() (done bool) {
 
 		switch ev.State {
 		case zk.StateExpired:
+			log.Warn("Session expired")
 			w.publish(true)
 			return false
 
 		case zk.StateDisconnected:
 			// Loop until we either hit the possible expiration deadline or the
 			// session is reacquired.
-			deadlineChan := time.After(w.sessionTimeout - w.recvTimeout)
+			deadlineDur := w.sessionTimeout - w.recvTimeout
+			deadlineChan := time.After(deadlineDur)
+			log.Warnf("Connection to ZooKeeper lost, considering session lost if not resolved in %s", deadlineDur)
 			resolved := false
 
 			for !resolved {
@@ -84,14 +88,17 @@ func (w *connSessionWatcher) watchSession() (done bool) {
 
 					switch ev.State {
 					case zk.StateHasSession:
+						log.Info("Connection to ZooKeeper restablished without session loss")
 						resolved = true
 
 					case zk.StateExpired:
+						log.Warn("Session expired")
 						w.publish(true)
 						return false
 					}
 
 				case <-deadlineChan:
+					log.Warn("Session considered lost due to lack of reestablished session after %s", deadlineDur)
 					w.publish(false)
 					return false
 				}
@@ -121,6 +128,8 @@ func (w *connSessionWatcher) watch() {
 
 	// Close all outstanding watchers by indicating a hard session loss, as the
 	// end of the event channel means the connection has been closed.
+	log.Debug("Done watching sessions as event channel has closed")
+
 	w.publish(true)
 }
 
