@@ -13,4 +13,7 @@ var (
 
 	// Lock acquisition timed out.
 	ErrTimeout = errors.New("lock acquisition timed out")
+
+	// Lock cancelled.
+	ErrCancelled = errors.New("lock acquisition cancelled")
 )
