@@ -1,15 +1,15 @@
 package zkutils
 
 import (
-	"github.com/samuel/go-zookeeper/zk"
 	log "github.com/nickbruun/gocommons/logging"
+	"github.com/samuel/go-zookeeper/zk"
 )
 
 // Await the existence of a node.
 //
 // Emits a nil object, or an error, on the channel, when the node at the given
 // path exists or an error occurs.
-func AwaitExists(conn *zk.Conn, path string) <- chan error {
+func AwaitExists(conn *zk.Conn, path string) <-chan error {
 	await := make(chan error, 1)
 
 	go func() {
@@ -26,7 +26,7 @@ func AwaitExists(conn *zk.Conn, path string) <- chan error {
 				return
 			} else {
 				log.Debugf("Node %s does not exist, awaiting event", path)
-				<- event
+				<-event
 			}
 		}
 	}()

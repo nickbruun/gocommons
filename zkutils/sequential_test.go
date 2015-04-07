@@ -42,21 +42,21 @@ func TestParseSequenceNode(t *testing.T) {
 	AssertParseSequenceNodeNotMatch(t, "000000000a", "")
 
 	// Test with prefix.
-	for _, prefix := range []string {
+	for _, prefix := range []string{
 		"",
 		"_guid_-",
 		"/my/sub/dir/",
 		"/my/sub/dir/_guid_",
 	} {
-		AssertParseSequenceNodeSequenceNumber(t, prefix + "prefix_a_0000000000", "prefix_a_", 0)
-		AssertParseSequenceNodeSequenceNumber(t, prefix + "prefix_a_0000000001", "prefix_a_", 1)
-		AssertParseSequenceNodeSequenceNumber(t, prefix + "prefix_a_-2147483648", "prefix_a_", -2147483648)
-		AssertParseSequenceNodeSequenceNumber(t, prefix + "prefix_a_2147483647", "prefix_a_", 2147483647)
+		AssertParseSequenceNodeSequenceNumber(t, prefix+"prefix_a_0000000000", "prefix_a_", 0)
+		AssertParseSequenceNodeSequenceNumber(t, prefix+"prefix_a_0000000001", "prefix_a_", 1)
+		AssertParseSequenceNodeSequenceNumber(t, prefix+"prefix_a_-2147483648", "prefix_a_", -2147483648)
+		AssertParseSequenceNodeSequenceNumber(t, prefix+"prefix_a_2147483647", "prefix_a_", 2147483647)
 
-		AssertParseSequenceNodeNotMatch(t, prefix + "prefix_a_0000000000", "prefix_b_")
-		AssertParseSequenceNodeNotMatch(t, prefix + "prefix_a_0000000001", "prefix_b_")
-		AssertParseSequenceNodeNotMatch(t, prefix + "prefix_a_-2147483648", "prefix_b_")
-		AssertParseSequenceNodeNotMatch(t, prefix + "prefix_a_2147483647", "prefix_b_")
+		AssertParseSequenceNodeNotMatch(t, prefix+"prefix_a_0000000000", "prefix_b_")
+		AssertParseSequenceNodeNotMatch(t, prefix+"prefix_a_0000000001", "prefix_b_")
+		AssertParseSequenceNodeNotMatch(t, prefix+"prefix_a_-2147483648", "prefix_b_")
+		AssertParseSequenceNodeNotMatch(t, prefix+"prefix_a_2147483647", "prefix_b_")
 	}
 
 	AssertParseSequenceNodeNotMatch(t, "0000000000", "prefix_a_")
@@ -105,30 +105,30 @@ func TestParseSequenceNodes(t *testing.T) {
 		"000000000a",
 	}
 
-	for _, fixture := range []struct{
-		Prefix string
+	for _, fixture := range []struct {
+		Prefix   string
 		Expected []SequenceNode
-	} {
+	}{
 		{"", []SequenceNode{
-				{"0000000000", 0},
-				{"0000000001", 1},
-				{"-2147483648", -2147483648},
-				{"2147483647", 2147483647},
-				{"prefix_a_0000000000", 0},
-				{"prefix_a_0000000001", 1},
-				{"prefix_a_-2147483648", -2147483648},
-				{"prefix_a_2147483647", 2147483647},
-				{"prefix_b_0000000000", 0},
-				{"prefix_b_0000000001", 1},
-				{"prefix_b_-2147483648", -2147483648},
-				{"prefix_b_2147483647", 2147483647},
+			{"0000000000", 0},
+			{"0000000001", 1},
+			{"-2147483648", -2147483648},
+			{"2147483647", 2147483647},
+			{"prefix_a_0000000000", 0},
+			{"prefix_a_0000000001", 1},
+			{"prefix_a_-2147483648", -2147483648},
+			{"prefix_a_2147483647", 2147483647},
+			{"prefix_b_0000000000", 0},
+			{"prefix_b_0000000001", 1},
+			{"prefix_b_-2147483648", -2147483648},
+			{"prefix_b_2147483647", 2147483647},
 		}},
 		{"prefix_a", []SequenceNode{}},
 		{"prefix_a_", []SequenceNode{
-				{"prefix_a_0000000000", 0},
-				{"prefix_a_0000000001", 1},
-				{"prefix_a_-2147483648", -2147483648},
-				{"prefix_a_2147483647", 2147483647},
+			{"prefix_a_0000000000", 0},
+			{"prefix_a_0000000001", 1},
+			{"prefix_a_-2147483648", -2147483648},
+			{"prefix_a_2147483647", 2147483647},
 		}},
 	} {
 		for _, prefix := range []string{
@@ -145,7 +145,7 @@ func TestParseSequenceNodes(t *testing.T) {
 			prefixedExpected := make([]SequenceNode, len(fixture.Expected))
 			for i, e := range fixture.Expected {
 				prefixedExpected[i] = SequenceNode{
-					Name: prefix + e.Name,
+					Name:           prefix + e.Name,
 					SequenceNumber: e.SequenceNumber,
 				}
 			}
@@ -187,10 +187,10 @@ func TestSequenceNodesAscendinglyNegativeLast(t *testing.T) {
 }
 
 func TestSortSequenceNodes(t *testing.T) {
-	for _, fixture := range []struct{
-		Nodes []SequenceNode
+	for _, fixture := range []struct {
+		Nodes    []SequenceNode
 		Expected []SequenceNode
-	} {
+	}{
 		{
 			[]SequenceNode{
 				{"", 3},

@@ -1,8 +1,8 @@
 package zkutils
 
 import (
-	"github.com/samuel/go-zookeeper/zk"
 	log "github.com/nickbruun/gocommons/logging"
+	"github.com/samuel/go-zookeeper/zk"
 	"strings"
 )
 

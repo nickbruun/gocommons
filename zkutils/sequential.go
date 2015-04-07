@@ -3,8 +3,8 @@ package zkutils
 import (
 	"fmt"
 	"regexp"
-	"strconv"
 	"sort"
+	"strconv"
 )
 
 // Sequence node.
@@ -51,11 +51,11 @@ func (l sequenceNodesAscendinglyNegativeLast) Less(i, j int) bool {
 	jsn := int64(l[j].SequenceNumber)
 
 	if isn < 0 {
-		isn = int64(2147483647 + 2147483649) + isn
+		isn = int64(2147483647+2147483649) + isn
 	}
 
 	if jsn < 0 {
-		jsn = int64(2147483647 + 2147483649) + jsn
+		jsn = int64(2147483647+2147483649) + jsn
 	}
 
 	return isn < jsn
@@ -81,7 +81,7 @@ func parseSequenceNode(name string, expr *regexp.Regexp) (SequenceNode, error) {
 	}
 
 	return SequenceNode{
-		Name: name,
+		Name:           name,
 		SequenceNumber: int32(idx),
 	}, nil
 }

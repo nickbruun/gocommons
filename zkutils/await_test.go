@@ -6,28 +6,28 @@ import (
 	"time"
 )
 
-func AssertNoAwaitResult(t *testing.T, path string, await <- chan error) {
+func AssertNoAwaitResult(t *testing.T, path string, await <-chan error) {
 	select {
-	case err := <- await:
+	case err := <-await:
 		if err != nil {
 			t.Fatalf("Error awaiting node existence for %s: %v", path, err)
 		} else {
 			t.Fatalf("Node unexpectedly exists: %s", path)
 		}
 
-	case <- time.After(100 * time.Millisecond):
+	case <-time.After(100 * time.Millisecond):
 		break
 	}
 }
 
-func AssertAwaitResult(t *testing.T, path string, await <- chan error) {
+func AssertAwaitResult(t *testing.T, path string, await <-chan error) {
 	select {
-	case err := <- await:
+	case err := <-await:
 		if err != nil {
 			t.Fatalf("Error awaiting node existence for %s: %v", path, err)
 		}
 
-	case <- time.After(time.Second):
+	case <-time.After(time.Second):
 		t.Fatalf("Timeout waiting for node to exist: %s", path)
 	}
 }
