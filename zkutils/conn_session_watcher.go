@@ -98,7 +98,7 @@ func (w *connSessionWatcher) watchSession() (done bool) {
 					}
 
 				case <-deadlineChan:
-					log.Warn("Session considered lost due to lack of reestablished session after %s", deadlineDur)
+					log.Warnf("Session considered lost due to lack of reestablished session after %s", deadlineDur)
 					w.publish(false)
 					return false
 				}
