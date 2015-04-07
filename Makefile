@@ -7,7 +7,8 @@ DEPENDENCIES := \
 
 DEPENDENCIES_DIRS := $(addprefix src/, $(DEPENDENCIES))
 
-export GOPATH=$(shell pwd)
+GOPATH ?= $(shell pwd)
+export GOPATH
 
 $(DEPENDENCIES_DIRS):
 	go get $(@:src/%=%)
