@@ -53,7 +53,7 @@ func (c *zkCandidate) isStoppedBefore(d time.Duration) bool {
 }
 
 // Get candidate node path from name.
-func (c *zkCandidate) candidateNodePath(name string) string {
+func (c *zkCandidate) nodePath(name string) string {
 	return fmt.Sprintf("%s/%s", c.pp, name)
 }
 
@@ -97,13 +97,13 @@ func (c *zkCandidate) safelyDeleteNode(path string) {
 	for {
 		err := c.c.Delete(path, -1)
 		if err == nil {
-			log.Debugf("Removed candidate node: %s", path)
+			log.Debugf("Removed node: %s", path)
 			break
 		} else if err == zk.ErrNoNode {
-			log.Debugf("Candidate node no longer exists: %s", path)
+			log.Debugf("Node no longer exists: %s", path)
 			break
 		} else {
-			log.Warnf("Failed to remove leadership candidate node, waiting 100 ms to retry: %v", err)
+			log.Warnf("Failed to remove node %s, waiting 100 ms to retry: %v", path, err)
 			time.Sleep(100 * time.Millisecond)
 		}
 	}
@@ -111,6 +111,38 @@ func (c *zkCandidate) safelyDeleteNode(path string) {
 
 // Assume leadership.
 func (c *zkCandidate) assumeLeadership(candidateNode zkutils.SequenceNode) (stopped bool) {
+	log.Debug("Attempting to acquire leadership")
+
+	// Acquire the leadership node.
+	leaderPath := c.nodePath("leader")
+	_, err := c.c.Create(leaderPath, nil, zk.FlagEphemeral, c.acl)
+	if err == zk.ErrNodeExists {
+		log.Warnf("Leadership node already exists: %s", leaderPath)
+		log.Debugf("Removing candidate node: %s", c.nodePath(candidateNode.Name))
+		c.safelyDeleteNode(c.nodePath(candidateNode.Name))
+
+		log.Debugf("Waiting for leadership node to disappear: %s", leaderPath)
+		exists, _, event, err := c.c.ExistsW(leaderPath)
+		if exists || err != nil {
+			return c.isStopped()
+		}
+
+		select {
+		case <-event:
+			return c.isStopped()
+		case <-c.stop:
+			return true
+		}
+	} else if err != nil {
+		log.Warnf("Error creating leader node %s: %v", leaderPath, err)
+		c.safelyDeleteNode(c.nodePath(candidateNode.Name))
+		return c.isStopped()
+	}
+
+	// Remove the leader and candidate nodes once we're done.
+	defer c.safelyDeleteNode(leaderPath)
+	defer c.safelyDeleteNode(c.nodePath(candidateNode.Name))
+
 	log.Info("Became leader")
 
 	// Invoke the leadership handler.
@@ -129,16 +161,14 @@ func (c *zkCandidate) assumeLeadership(candidateNode zkutils.SequenceNode) (stop
 	removed := make(chan struct{}, 1)
 
 	go func() {
-		path := c.candidateNodePath(candidateNode.Name)
-
 		for {
-			exists, _, err := c.c.Exists(path)
+			exists, _, err := c.c.Exists(leaderPath)
 
 			if err != nil || !exists {
 				if err != nil {
-					log.Debugf("Error checking for existence of candidate node %s: %v", path, err)
+					log.Debugf("Error checking for existence of leader node %s: %v", leaderPath, err)
 				} else {
-					log.Debugf("Candidate node no longer exists: %s", path)
+					log.Debugf("Candidate node no longer exists: %s", leaderPath)
 				}
 
 				removed <- struct{}{}
@@ -172,9 +202,6 @@ func (c *zkCandidate) assumeLeadership(candidateNode zkutils.SequenceNode) (stop
 	}
 
 	log.Debug("Leadership handler returned, relieving leadership role")
-
-	// For good meassure, remove the candidate node.
-	c.safelyDeleteNode(c.candidateNodePath(candidateNode.Name))
 
 	return stopped || c.isStopped()
 }
@@ -224,7 +251,7 @@ func (c *zkCandidate) awaitLeadership(candidateNode zkutils.SequenceNode) (stopp
 			return c.assumeLeadership(candidateNode)
 		} else {
 			// Wait for the candidate node prior to our candidate to disappear.
-			path := c.candidateNodePath(candidateNodes[candidateIdx-1].Name)
+			path := c.nodePath(candidateNodes[candidateIdx-1].Name)
 			log.Debugf("Waiting for change in %s", path)
 
 			exists, _, eventChan, err := c.c.ExistsW(path)

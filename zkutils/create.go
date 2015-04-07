@@ -29,7 +29,7 @@ func CreateRecursively(conn *zk.Conn, path string, acl []zk.ACL) (err error) {
 			return
 		}
 
-		log.Debugf("Create node: %s", path)
+		log.Debugf("Created node: %s", path)
 	}
 
 	return
