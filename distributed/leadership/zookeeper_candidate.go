@@ -134,20 +134,20 @@ func (c *zkCandidate) assumeLeadership(candidateNode zkutils.SequenceNode) (stop
 		exists, _, ec, err := c.cm.Conn.ExistsW(candidatePath)
 
 		if err != nil {
-			log.Debugf("Error checking for existence of leader node %s: %v", candidatePath, err)
+			log.Warnf("Error checking for existence of leader node %s, resigning as leader: %v", candidatePath, err)
 			lost <- struct{}{}
 			return
 		} else if !exists {
-			log.Debugf("Candidate node no longer exists: %s", candidatePath)
+			log.Warnf("Candidate node no longer exists, resigning as leader: %s", candidatePath)
 			lost <- struct{}{}
 			return
 		}
 
 		select {
 		case <-ec:
-			log.Debugf("Candidate node removed: %s", candidatePath)
+			log.Warnf("Candidate node removed, resigning as leader: %s", candidatePath)
 		case <-sessionLoss:
-			log.Debugf("Session possibly lost: %s", candidatePath)
+			log.Warnf("Session likely lost, resigning as leader: %s", candidatePath)
 		}
 
 		lost <- struct{}{}
@@ -279,7 +279,7 @@ func (c *zkCandidate) run() {
 
 func (c *zkCandidate) Stop() {
 	c.stop <- struct{}{}
-	log.Debug("Sent stop signal")
+	log.Debug("Sent stop signal, waiting for running candidate")
 	c.done.Wait()
 	log.Debug("Done waiting for running candidate")
 }
