@@ -2,7 +2,7 @@ package zkutils
 
 import (
 	"github.com/samuel/go-zookeeper/zk"
-	log "github.com/nickbruun/logging"
+	log "github.com/nickbruun/gocommons/logging"
 )
 
 // Await the existence of a node.
