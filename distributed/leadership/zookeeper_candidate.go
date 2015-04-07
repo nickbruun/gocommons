@@ -173,7 +173,7 @@ func (c *zkCandidate) assumeLeadership(candidateNode zkutils.SequenceNode) (stop
 		<-resigned
 	}
 
-	log.Debug("Leadership handler returned, relieving leadership role")
+	log.Info("Resigned leadership")
 
 	return stopped || c.isStopped()
 }
@@ -280,6 +280,10 @@ func (c *zkCandidate) Stop() {
 }
 
 // New ZooKeeper candidate.
+//
+// The leadership is maintained in the most cautious manner possible, meaning
+// that if an error occurs in polling the ZooKeeper cluster, the leadership is
+// immediately terminated to avoid racing leaders as best as possible.
 func NewZooKeeperCandidate(zkConn *zk.Conn, pathPrefix string, leadershipHandler LeadershipHandler) (Candidate, error) {
 	if pathPrefix == "" || pathPrefix == "/" {
 		return nil, fmt.Errorf("invalid path prefix: %s", pathPrefix)
