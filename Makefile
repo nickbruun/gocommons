@@ -1,7 +1,8 @@
 PACKAGES := \
 	logging \
 	zkutils \
-	distributed/leadership
+	distributed/leadership \
+	distributed/locking
 DEPENDENCIES := \
 	github.com/Sirupsen/logrus \
 	github.com/samuel/go-zookeeper/zk
