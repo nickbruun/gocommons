@@ -30,7 +30,7 @@ type zkCandidateTestRigConfig struct {
 
 // ZooKeeper candidate test rig candidate.
 type zkCandidateTestRigCandidate struct {
-	zk         *zk.Conn
+	zk         *zkutils.ConnMan
 	cand       Candidate
 	resign     chan struct{}
 	isLeader   bool
@@ -220,7 +220,7 @@ func newZkCandidateTestRig(t *testing.T, config zkCandidateTestRigConfig) *zkCan
 			await = rig.AwaitNewCandidateNode()
 		}
 
-		candZkConn, _, err := zk.Connect(config.Servers, 10*time.Second)
+		candZkConn, err := zkutils.Connect(config.Servers, 10*time.Second)
 		if err != nil {
 			t.Fatalf("Failed to create candidate rig connection: %v", err)
 		}

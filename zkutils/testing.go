@@ -140,13 +140,13 @@ func CreateTestCluster(t *testing.T, size int) (testCluster *zk.TestCluster, ser
 }
 
 // Create a test cluster of a given size and a connection to the cluster.
-func CreateTestClusterAndConn(t *testing.T, size int) (testCluster *zk.TestCluster, conn *zk.Conn) {
+func CreateTestClusterAndConnMan(t *testing.T, size int) (testCluster *zk.TestCluster, connMan *ConnMan) {
 	var serverAddrs []string
 	testCluster, serverAddrs = CreateTestCluster(t, size)
 
 	// Create a connection.
 	var err error
-	conn, _, err = zk.Connect(serverAddrs, 10*time.Second)
+	connMan, err = Connect(serverAddrs, 10*time.Second)
 	if err != nil {
 		testCluster.Stop()
 		t.Fatalf("Failed to create connection to test cluster: %v", err)

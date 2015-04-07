@@ -14,7 +14,7 @@ import (
 // ZooKeeper candidate.
 type zkCandidate struct {
 	// ZooKeeper connection.
-	c *zk.Conn
+	cm *zkutils.ConnMan
 
 	// ZooKeeper path prefix.
 	pp string
@@ -60,7 +60,7 @@ func (c *zkCandidate) nodePath(name string) string {
 // List all candidates.
 func (c *zkCandidate) listCandidateNodes() ([]zkutils.SequenceNode, error) {
 	// List the child nodes of the prefix.
-	children, _, err := c.c.Children(c.pp)
+	children, _, err := c.cm.Conn.Children(c.pp)
 	if err == zk.ErrNoNode {
 		return []zkutils.SequenceNode{}, nil
 	} else if err != nil {
@@ -76,13 +76,13 @@ func (c *zkCandidate) createCandidateNode() (n zkutils.SequenceNode, err error) 
 	candidatePath := fmt.Sprintf("%s/candidate", c.pp)
 
 	var path string
-	path, err = c.c.CreateProtectedEphemeralSequential(candidatePath, nil, c.acl)
+	path, err = c.cm.Conn.CreateProtectedEphemeralSequential(candidatePath, nil, c.acl)
 
 	if err == nil {
 		n, err = zkutils.ParseSequenceNode(path, "candidate")
 		return
 	} else if err == zk.ErrNoNode {
-		if err = zkutils.CreateRecursively(c.c, c.pp, c.acl); err != nil {
+		if err = zkutils.CreateRecursively(c.cm.Conn, c.pp, c.acl); err != nil {
 			return
 		}
 		return c.createCandidateNode()
@@ -95,7 +95,7 @@ func (c *zkCandidate) createCandidateNode() (n zkutils.SequenceNode, err error) 
 // Safely delete a node.
 func (c *zkCandidate) safelyDeleteNode(path string) {
 	for {
-		err := c.c.Delete(path, -1)
+		err := c.cm.Conn.Delete(path, -1)
 		if err == nil {
 			log.Debugf("Removed node: %s", path)
 			break
@@ -126,26 +126,31 @@ func (c *zkCandidate) assumeLeadership(candidateNode zkutils.SequenceNode) (stop
 		resigned <- struct{}{}
 	}()
 
-	// Watch for changes in the candidate node.
-	//
-	// If an error occurs, we need to assume that it's virtually impossible for
-	// us to correctly assume leadership.
-	removed := make(chan struct{}, 1)
+	// Watch for session or node loss.
+	lost := make(chan struct{}, 1)
 
 	go func() {
-		for {
-			exists, _, err := c.c.Exists(candidatePath)
+		sessionLoss := c.cm.WatchSessionLoss()
+		exists, _, ec, err := c.cm.Conn.ExistsW(candidatePath)
 
-			if err != nil || !exists {
-				if err != nil {
-					log.Debugf("Error checking for existence of leader node %s: %v", candidatePath, err)
-				} else {
-					log.Debugf("Candidate node no longer exists: %s", candidatePath)
-				}
-
-				removed <- struct{}{}
-			}
+		if err != nil {
+			log.Debugf("Error checking for existence of leader node %s: %v", candidatePath, err)
+			lost <- struct{}{}
+			return
+		} else if !exists {
+			log.Debugf("Candidate node no longer exists: %s", candidatePath)
+			lost <- struct{}{}
+			return
 		}
+
+		select {
+		case <-ec:
+			log.Debugf("Candidate node removed: %s", candidatePath)
+		case <-sessionLoss:
+			log.Debugf("Session possibly lost: %s", candidatePath)
+		}
+
+		lost <- struct{}{}
 	}()
 
 	// Wait for the leadership handler to stop, the candidate to be stopped
@@ -164,7 +169,7 @@ func (c *zkCandidate) assumeLeadership(candidateNode zkutils.SequenceNode) (stop
 		log.Debug("Candidate stopped, awaiting leadership handler return")
 		<-resigned
 
-	case <-removed:
+	case <-lost:
 		// If the candidate node is removed (or presumed removed due to a
 		// timeout), send an end message to the leadership handler and wait for
 		// the handler to resign.
@@ -226,7 +231,7 @@ func (c *zkCandidate) awaitLeadership(candidateNode zkutils.SequenceNode) (stopp
 			path := c.nodePath(candidateNodes[candidateIdx-1].Name)
 			log.Debugf("Waiting for change in %s", path)
 
-			exists, _, eventChan, err := c.c.ExistsW(path)
+			exists, _, eventChan, err := c.cm.Conn.ExistsW(path)
 			if !exists || err != nil {
 				continue
 			}
@@ -284,13 +289,13 @@ func (c *zkCandidate) Stop() {
 // The leadership is maintained in the most cautious manner possible, meaning
 // that if an error occurs in polling the ZooKeeper cluster, the leadership is
 // immediately terminated to avoid racing leaders as best as possible.
-func NewZooKeeperCandidate(zkConn *zk.Conn, pathPrefix string, leadershipHandler LeadershipHandler) (Candidate, error) {
+func NewZooKeeperCandidate(zkConn *zkutils.ConnMan, pathPrefix string, leadershipHandler LeadershipHandler) (Candidate, error) {
 	if pathPrefix == "" || pathPrefix == "/" {
 		return nil, fmt.Errorf("invalid path prefix: %s", pathPrefix)
 	}
 
 	zc := &zkCandidate{
-		c:    zkConn,
+		cm:   zkConn,
 		pp:   strings.TrimRight(pathPrefix, "/"),
 		acl:  zk.WorldACL(zk.PermAll),
 		lh:   leadershipHandler,

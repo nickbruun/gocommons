@@ -23,13 +23,13 @@ func AssertCreateRecursivelyCreates(t *testing.T, conn *zk.Conn, path string) {
 }
 
 func TestCreateRecursively(t *testing.T) {
-	testCluster, conn := CreateTestClusterAndConn(t, 1)
+	testCluster, conn := CreateTestClusterAndConnMan(t, 1)
 	defer testCluster.Stop()
 	defer conn.Close()
 
-	AssertCreateRecursivelyCreates(t, conn, "/")
-	AssertCreateRecursivelyCreates(t, conn, "/one")
-	AssertCreateRecursivelyCreates(t, conn, "/one")
-	AssertCreateRecursivelyCreates(t, conn, "/two/three/four/five/six")
-	AssertCreateRecursivelyCreates(t, conn, "/two/three/four/five/six")
+	AssertCreateRecursivelyCreates(t, conn.Conn, "/")
+	AssertCreateRecursivelyCreates(t, conn.Conn, "/one")
+	AssertCreateRecursivelyCreates(t, conn.Conn, "/one")
+	AssertCreateRecursivelyCreates(t, conn.Conn, "/two/three/four/five/six")
+	AssertCreateRecursivelyCreates(t, conn.Conn, "/two/three/four/five/six")
 }

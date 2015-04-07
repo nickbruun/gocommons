@@ -33,37 +33,37 @@ func AssertAwaitResult(t *testing.T, path string, await <-chan error) {
 }
 
 func TestAwaitExists(t *testing.T) {
-	testCluster, conn := CreateTestClusterAndConn(t, 1)
+	testCluster, conn := CreateTestClusterAndConnMan(t, 1)
 	defer testCluster.Stop()
 	defer conn.Close()
 
 	// Test for root path.
-	await := AwaitExists(conn, "/")
+	await := AwaitExists(conn.Conn, "/")
 	AssertAwaitResult(t, "/", await)
 
 	// Test for single-level path.
-	await = AwaitExists(conn, "/one")
+	await = AwaitExists(conn.Conn, "/one")
 
 	AssertNoAwaitResult(t, "/one", await)
 
-	if err := CreateRecursively(conn, "/one", zk.WorldACL(zk.PermAll)); err != nil {
+	if err := CreateRecursively(conn.Conn, "/one", zk.WorldACL(zk.PermAll)); err != nil {
 		t.Fatalf("Error creaeting /one: %v", err)
 	}
 
 	AssertAwaitResult(t, "/one", await)
 
 	// Test for multi-level path.
-	await = AwaitExists(conn, "/two/three")
+	await = AwaitExists(conn.Conn, "/two/three")
 
 	AssertNoAwaitResult(t, "/two/three", await)
 
-	if err := CreateRecursively(conn, "/two", zk.WorldACL(zk.PermAll)); err != nil {
+	if err := CreateRecursively(conn.Conn, "/two", zk.WorldACL(zk.PermAll)); err != nil {
 		t.Fatalf("Error creating /two: %v", err)
 	}
 
 	AssertNoAwaitResult(t, "/two/three", await)
 
-	if err := CreateRecursively(conn, "/two/three", zk.WorldACL(zk.PermAll)); err != nil {
+	if err := CreateRecursively(conn.Conn, "/two/three", zk.WorldACL(zk.PermAll)); err != nil {
 		t.Fatalf("Error creating /two/three: %v", err)
 	}
 
