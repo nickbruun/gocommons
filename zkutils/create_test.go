@@ -3,7 +3,6 @@ package zkutils
 import (
 	"github.com/samuel/go-zookeeper/zk"
 	"testing"
-	"time"
 )
 
 func AssertCreateRecursivelyCreates(t *testing.T, conn *zk.Conn, path string) {
@@ -24,13 +23,8 @@ func AssertCreateRecursivelyCreates(t *testing.T, conn *zk.Conn, path string) {
 }
 
 func TestCreateRecursively(t *testing.T) {
-	testCluster, serverAddrs := CreateTestCluster(t, 1)
+	testCluster, conn := CreateTestClusterAndConn(t, 1)
 	defer testCluster.Stop()
-
-	conn, _, err := zk.Connect(serverAddrs, 10 * time.Second)
-	if err != nil {
-		t.Fatalf("Failed to create ZooKeeper connection to test cluster")
-	}
 	defer conn.Close()
 
 	AssertCreateRecursivelyCreates(t, conn, "/")
