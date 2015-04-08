@@ -3,8 +3,8 @@ package locking
 import (
 	log "github.com/nickbruun/gocommons/logging"
 	"github.com/nickbruun/gocommons/unittest"
-	"time"
 	"sync"
+	"time"
 )
 
 // Lock test suite.

@@ -1,6 +1,7 @@
 package unittest
 
 import (
+	"github.com/Sirupsen/logrus"
 	"fmt"
 	"io"
 	"os"
@@ -45,6 +46,9 @@ func (h *stdHijacker) Hijack() {
 	os.Stdout = h.w
 	os.Stderr = h.w
 
+	// Acquire the log output from logrus.
+	logrus.SetOutput(h.w)
+
 	// Start a draining function.
 	go func() {
 		var n int
@@ -78,6 +82,9 @@ func (h *stdHijacker) Hijack() {
 
 // Release.
 func (h *stdHijacker) Release() {
+	// Reassign the log output for logrus.
+	logrus.SetOutput(h.Stdout)
+
 	// Assign stdout and stderr to the original values.
 	os.Stdout = h.Stdout
 	os.Stderr = h.Stderr

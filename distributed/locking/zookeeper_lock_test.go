@@ -14,7 +14,7 @@ type ZooKeeperLockTestSuite struct {
 	LockTestSuite
 
 	TestCluster *zk.TestCluster
-	ConnMan *zkutils.ConnMan
+	ConnMan     *zkutils.ConnMan
 }
 
 func (s *ZooKeeperLockTestSuite) SetUpSuite() {
