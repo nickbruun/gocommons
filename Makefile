@@ -5,7 +5,9 @@ PACKAGES := \
 	distributed/locking
 DEPENDENCIES := \
 	github.com/Sirupsen/logrus \
-	github.com/samuel/go-zookeeper/zk
+	github.com/samuel/go-zookeeper/zk \
+	github.com/jacobsa/oglematchers \
+	github.com/mgutz/ansi
 
 GOPATH ?= $(shell pwd)
 GOPATH_FIRST := $(firstword $(subst :, ,$(GOPATH)))
